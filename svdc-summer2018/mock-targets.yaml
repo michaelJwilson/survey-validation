@@ -2,20 +2,21 @@ dust_dir: '{DUST_DIR}/maps'
 sources:
     BGS: {
         target_name: BGS,
-        mockfile: '{DESI_ROOT}/mocks/bgs/MXXL/desi_footprint/v0.0.4/BGS.hdf5',
-        format: durham_mxxl_hdf5,
-        magcut: 20.2,
+        mockfile: '{DESI_ROOT}/datachallenge/svdc-summer2018/sv-bgs-sample.fits',
+        format: gama-bgs,
     }
     MWS_MAIN: {
         target_name: MWS_MAIN,
         mockfile: '{DESI_ROOT}/mocks/mws/galaxia/alpha/v0.0.5/healpix',
         nside_galaxia: 8,
         format: galaxia,
+        calib_only: True,
     }
     WD: {
         target_name: WD,
         mockfile: '{DESI_ROOT}/mocks/mws/wd/v0.0.2/mock_wd.fits',
         format: mws_wd,
+        calib_only: True,
     }
     SKY: {
         target_name: SKY,
