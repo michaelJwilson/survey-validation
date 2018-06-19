@@ -147,7 +147,7 @@ fiber_assignment_order:
 # Name of file defining DESI tiles for desimodel.io.load_tiles(tiles_file).
 # Without path this will look in $DESIMODEL/data/footprint/; otherwise with
 # a path (relative or absolute) it will read that file.
-tiles_file: sv-bgs-tiles.fits
+tiles_file: bgs-gama-tiles.fits
 
 #-------------------------------------------------------------------
 # Base path to pre-pended to all non-absolute paths used for writing
@@ -155,4 +155,4 @@ tiles_file: sv-bgs-tiles.fits
 # variables.
 #-------------------------------------------------------------------
 
-output_path: '{DESI_ROOT}/survey-validation/survey'
+output_path: '{DESI_ROOT}/datachallenge/svdc-summer2018'
