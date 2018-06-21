@@ -2,8 +2,8 @@ dust_dir: '{DUST_DIR}/maps'
 sources:
     BGS: {
         target_name: BGS,
-        mockfile: '{DESI_ROOT}/datachallenge/svdc-summer2018/sv-bgs-sample.fits',
-        format: gama-bgs,
+        mockfile: '{DESI_ROOT}/datachallenge/svdc-summer2018/bgs-gama-sample.fits',
+        format: bgs-gama,
     }
     MWS_MAIN: {
         target_name: MWS_MAIN,
