@@ -9,7 +9,7 @@ import glob
 from desisim.quickcat import quickcat
 
 # target selection
-os.environ['DECALS_PATH'] = '/project/projectdirs/desi/target/catalogs/'
+os.environ['DECALS_PATH'] = '/project/projectdirs/desi/target/catalogs/dr5/0.20.0/'
 targetfile = os.path.join(os.environ['DECALS_PATH'], "targets-dr5-0.20.0.fits")
 
 
@@ -24,6 +24,13 @@ columns = [
     'TARGETID', 'RA', 'DEC', 'SUBPRIORITY', 'BRICKNAME',
     'DESI_TARGET', 'BGS_TARGET', 'MWS_TARGET',
 ]
+
+std_mask = 0
+for name in ['STD', 'STD_FSTAR', 'STD_WD',
+             'STD_FAINT', 'STD_FAINT_BEST',
+             'STD_BRIGHT', 'STD_BRIGHT_BEST']:
+    if name in desi_mask.names():
+        std_mask |= desi_mask[name]
 
 #truth file
 truthfile = "data/truth.fits"
@@ -47,15 +54,18 @@ if not os.path.exists(truthfile):
     nothing = '          '
     truth['TEMPLATESUBTYPE'] = np.repeat(nothing, nobj)
 
-    masks = ['BGS_ANY', 'ELG', 'LRG', 'QSO', 'STD_FSTAR', 'STD_BRIGHT']
-    dict_truespectype = {'BGS_ANY':'GALAXY', 'ELG':'GALAXY', 'LRG':'GALAXY', 'QSO':'QSO', 
-                    'STD_FSTAR':'STAR', 'STD_BRIGHT':'STAR'}
-    dict_truetemplatetype = {'BGS_ANY':'BGS', 'ELG':'ELG', 'LRG':'LRG', 'QSO':'QSO', 
-                        'STD_FSTAR':'STAR', 'STD_BRIGHT':'STAR'}
 
-    for m in masks:
-        istype = (targets['DESI_TARGET'] & desi_mask.mask(m))!=0
-        print(m, np.count_nonzero(istype))
+
+    dict_truespectype = {'BGS_ANY':'GALAXY', 'ELG':'GALAXY', 'LRG':'GALAXY', 'QSO':'QSO', 
+                         'STD':'STAR'}
+    dict_truetemplatetype = {'BGS_ANY':'BGS', 'ELG':'ELG', 'LRG':'LRG', 'QSO':'QSO', 
+                        'STD':'STAR'}
+    masks = {'BGS_ANY':desi_mask.mask('BGS_ANY'), 'ELG':desi_mask.mask('ELG'), 
+             'LRG':desi_mask.mask('LRG'), 'QSO':desi_mask.mask('QSO'), 'STD':std_mask}
+
+    for m in masks.keys():
+        istype = (targets['DESI_TARGET'] & masks[m])!=0
+        print(np.count_nonzero(istype))
         truth['TRUESPECTYPE'][istype] = np.repeat(dict_truespectype[m], np.count_nonzero(istype))
         truth['TEMPLATETYPE'][istype] = np.repeat(dict_truetemplatetype[m], np.count_nonzero(istype))
         truth['MOCKID'][istype] = targets['TARGETID'][istype]
@@ -94,10 +104,9 @@ if not os.path.exists(skyfile):
 #reloading target data
 
 mtlfile = 'data/mtl.fits'
-darkfile = 'data/std-dark.fits'
-brightfile = 'data/std-bright.fits'
+starfile = 'data/std.fits'
 
-if (not os.path.exists(mtlfile)) or (not os.path.exists(brightfile)) or (not os.path.exists(darkfile)):
+if (not os.path.exists(mtlfile)) or (not os.path.exists(starfile)):
     targetdata = fitsio.read(targetfile, 'TARGETS', columns=columns)
     print('Done reading target data')
 
@@ -118,25 +127,16 @@ if not os.path.exists(mtlfile):
     print('DESI_TARGETS: {}'.format(np.count_nonzero(targetdata['DESI_TARGET']!=0)))
 
 #standards
-if not os.path.exists(darkfile):
-    darkstd = (targetdata['DESI_TARGET'] & desi_mask.mask('STD_FSTAR|STD_WD')) != 0
-    darkdata = targetdata[darkstd]
-    obscond = np.ones(len(darkdata), dtype=np.int64)
-    darkdata = np.lib.recfunctions.append_fields(
-    darkdata, 'OBSCONDITIONS', obscond)
-    fitsio.write(darkfile, darkdata, extname='STD')
-    print('{} dark standards'.format(np.count_nonzero(darkstd)))
-    print('Finished with dark standards')
+if not os.path.exists(starfile):
+    starstd = (targetdata['DESI_TARGET'] & std_mask) != 0
+    stardata = targetdata[starstd]
+    obscond = np.int_(np.repeat(4, len(stardata))) # 4 represents bright time
+    stardata = np.lib.recfunctions.append_fields(
+    stardata, 'OBSCONDITIONS', obscond)    
+    fitsio.write(starfile, stardata, extname='STD')
+    print('{} dark standards'.format(np.count_nonzero(stardata)))
+    print('Finished with standards')
     
-if not os.path.exists(brightfile):
-    brightstd = (targetdata['DESI_TARGET'] & desi_mask.mask('STD_BRIGHT')) != 0
-    brightdata = targetdata[brightstd]
-    obscond = np.int_(np.repeat(4, len(brightdata)))
-    brightdata = np.lib.recfunctions.append_fields(
-    brightdata, 'OBSCONDITIONS', obscond)
-    fitsio.write(brightfile, brightdata, extname='STD')
-    print('Done with bright standards')
-    print('{} bright standards'.format(np.count_nonzero(brightstd)))
     
 output_bright = 'output/'
 if not os.path.exists(output_bright):
@@ -144,10 +144,12 @@ if not os.path.exists(output_bright):
     
 cmd = "fiberassign --mtl data/mtl.fits "
 cmd += " --sky data/dense_sky.fits "
-cmd += " --stdstar data/std-bright.fits "
+cmd += " --stdstar data/std.fits "
 cmd += " --fibstatusfile data/fiberstatus.ecsv"
 cmd += " --footprint data/bgs_sv.fits " 
 cmd += " --outdir output/ "
+cmd += " --nstarpetal 20 "
+cmd += " --nskypetal 80"
 print(cmd)
 print('starting fiberassign')
 os.system(cmd)
