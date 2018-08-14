@@ -82,9 +82,9 @@ if not os.path.exists(mtlfile):
     import desitarget.mtl
     mtl = desitarget.mtl.make_mtl(targetdata)
 
-    # only include BGS
-    isbgs = mtl['BGS_TARGET']!=0
-    mtl = mtl[isbgs]
+    # only include BGS and MWS
+    isbgsmws = (mtl['BGS_TARGET']!=0) | (mtl['MWS_TARGET']!=0)
+    mtl = mtl[isbgsmws]
 
     mtl.meta['EXTNAME'] = 'MTL'
     # rewrite NUMOBS for BGS targets
