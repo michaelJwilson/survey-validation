@@ -9,16 +9,8 @@ import glob
 from desisim.quickcat import quickcat
 
 # target selection
-os.environ['DECALS_PATH'] = '/project/projectdirs/desi/target/catalogs/dr5/0.20.0/'
-targetfile = os.path.join(os.environ['DECALS_PATH'], "targets-dr5-0.20.0.fits")
-
-
-if not os.path.exists(targetfile):
-    cmd = "select_targets {source} {destination}"
-    cmd = cmd.format(source=os.environ['DECALS_PATH'], destination=targetfile)
-    print(cmd)
-    subprocess.call(cmd.split())
-    print('Done with target selection')
+os.environ['DECALS_PATH'] = '/project/projectdirs/desi/target/catalogs/dr7.1/0.23.0/'
+targetfile = os.path.join(os.environ['DECALS_PATH'], "targets-dr7.1-0.23.0.fits")
 
 columns = [
     'TARGETID', 'RA', 'DEC', 'SUBPRIORITY', 'BRICKNAME',
@@ -38,8 +30,9 @@ if not os.path.exists(truthfile):
     import desitarget.mock.mockmaker as mb
     from desitarget.targetmask import desi_mask, bgs_mask, mws_mask
 
-    #targetsfilename = "small_chunk_targets-dr5.0-0.16.2.fits"
     targets = fitsio.read(targetfile, 'TARGETS', columns=columns)
+
+
     colnames = list(targets.dtype.names)
     print(colnames)
     nobj = len(targets)
@@ -76,55 +69,36 @@ if not os.path.exists(truthfile):
     print('done truth')
 
 
-#generate sky data
-from desitarget.mock.sky import random_sky
-from desitarget.targetmask import desi_mask, bgs_mask, mws_mask, obsmask, obsconditions
-import desimodel.footprint
-
-skyfile = 'data/dense_sky.fits'
-if not os.path.exists(skyfile):
-
-    skyra, skydec = random_sky(nside=4096)
-    n_p = len(skyra)
-
-    data = Table()
-    data['RA'] = skyra
-    data['DEC'] = skydec
-    data['TARGETID'] = np.int_(1E10+ np.arange(n_p))
-    data['DESI_TARGET'] = np.int_(np.ones(n_p) * desi_mask['SKY'])
-    data['MWS_TARGET'] = np.int_(np.zeros(n_p))
-    data['BGS_TARGET'] = np.int_(np.zeros(n_p))
-    data['OBSCONDITIONS'] = np.int_(np.ones(n_p)*(obsconditions['DARK']|obsconditions['BRIGHT']|obsconditions['GRAY']))
-    data['BRICKNAME'] = np.chararray(n_p, itemsize=8)
-    data['BRICKNAME'][:] = "b0000000"
-    data['SUBPRIORITY'] = np.random.random(n_p)
-    data.write(skyfile, overwrite=True)
-    print('Done creating sky data')
-
-#reloading target data
 
 mtlfile = 'data/mtl.fits'
 starfile = 'data/std.fits'
-
 if (not os.path.exists(mtlfile)) or (not os.path.exists(starfile)):
     targetdata = fitsio.read(targetfile, 'TARGETS', columns=columns)
-    print('Done reading target data')
+    print('Done reading target data to comput mtl + star')
 
 #compute MTL
 if not os.path.exists(mtlfile):
+    print('computing mtl')
     import desitarget.mtl
     mtl = desitarget.mtl.make_mtl(targetdata)
-    mtl.meta['EXTNAME'] = 'MTL'
 
+    # only include BGS
+    isbgs = mtl['BGS_TARGET']!=0
+    mtl = mtl[isbgs]
+
+    mtl.meta['EXTNAME'] = 'MTL'
     # rewrite NUMOBS for BGS targets
     ii = mtl['BGS_TARGET']!=0
     mtl['NUMOBS_MORE'][ii] = 4
+
     mtl.write(mtlfile)
+    
 
     #print some stats
-    print('MWS_TARGETS: {}'.format(np.count_nonzero(targetdata['MWS_TARGET']!=0)))
-    print('BGS_TARGETS: {}'.format(np.count_nonzero(targetdata['BGS_TARGET']!=0)))
-    print('DESI_TARGETS: {}'.format(np.count_nonzero(targetdata['DESI_TARGET']!=0)))
+    print('MWS_TARGETS: {}'.format(np.count_nonzero(mtl['MWS_TARGET']!=0)))
+    print('BGS_TARGETS: {}'.format(np.count_nonzero(mtl['BGS_TARGET']!=0)))
+    print('DESI_TARGETS: {}'.format(np.count_nonzero(mtl['DESI_TARGET']!=0)))
+    print('finished computing mtl')
 
 #standards
 if not os.path.exists(starfile):
@@ -136,14 +110,14 @@ if not os.path.exists(starfile):
     fitsio.write(starfile, stardata, extname='STD')
     print('{} dark standards'.format(np.count_nonzero(stardata)))
     print('Finished with standards')
-    
-    
+
 output_bright = 'output/'
 if not os.path.exists(output_bright):
     os.makedirs(output_bright)
     
+skyfile = '/project/projectdirs/desi/target/catalogs/dr7.1/0.22.0/skies-dr7.1-0.22.0.fits'
 cmd = "fiberassign --mtl data/mtl.fits "
-cmd += " --sky data/dense_sky.fits "
+cmd += " --sky {} ".format(skyfile)
 cmd += " --stdstar data/std.fits "
 cmd += " --fibstatusfile data/fiberstatus.ecsv"
 cmd += " --footprint data/bgs_sv.fits " 
