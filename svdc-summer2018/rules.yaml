@@ -1,0 +1,10 @@
+#-------------------------------------------------------------------
+# Definition of tile groups that are separately scheduled
+# and prioritized. See doc/rules.rst for an explanation for the format.
+#-------------------------------------------------------------------
+
+BGS_SV:
+    dec_order: +0.2
+    passes: 20
+    rules:
+        BGS_SV(0): { START: 1.0 }
