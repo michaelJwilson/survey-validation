@@ -1,8 +1,10 @@
+# mockfile: '{DESI_ROOT}/datachallenge/svdc-summer2018/bgs-gama-sample.fits',
+        
 dust_dir: '{DUST_DIR}/maps'
 sources:
     BGS: {
         target_name: BGS,
-        mockfile: '{DESI_ROOT}/datachallenge/svdc-summer2018/bgs-gama-sample.fits',
+        mockfile: '/global/cscratch1/sd/ioannis/svdc-summer2018/GAMA-DR3/bgs-gama-sample.fits',
         format: bgs-gama,
     }
     MWS_MAIN: {
