@@ -1,0 +1,26 @@
+#-------------------------------------------------------------------
+# Definition of tile groups that are separately scheduled
+# and prioritized. See doc/rules.rst for an explanation for the format.
+#-------------------------------------------------------------------
+
+# Implement a simple depth-first survey strategy that expands out from
+# DEC=18deg (2deg) in the NGC (SGC), with all tiles included in the
+# schedule as soon as they have fibers assigned.
+
+NLO:
+    # Expand downwards from DEC=18deg in all passes.
+    cap: N
+    passes: 5
+    dec_max: 18
+    dec_order: -0.2
+    rules:
+        NLO(5): { START: 1.0 }
+
+SLO:
+    # Expand upwards from DEC=2deg in all passes.
+    cap: S
+    passes: 5
+    dec_max: 2
+    dec_order: -0.2
+    rules:
+        SLO(5): { START: 1.0 }
